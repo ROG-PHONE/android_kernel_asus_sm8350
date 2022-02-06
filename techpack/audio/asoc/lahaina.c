@@ -82,6 +82,10 @@
 #define WCN_CDC_SLIM_TX_CH_MAX 2
 #define WCN_CDC_SLIM_TX_CH_MAX_LITO 3
 
+#ifdef ASUS_ZS673KS_PROJECT
+/* ESS Definitions */
+static struct snd_soc_jack sdm845_sound_jack;
+#endif
 #define SWR_MAX_SLAVE_DEVICES 6
 
 enum {
@@ -317,6 +321,7 @@ static u32 mi2s_ebit_clk[MI2S_MAX] = {
 	Q6AFE_LPASS_CLK_ID_PRI_MI2S_EBIT,
 	Q6AFE_LPASS_CLK_ID_SEC_MI2S_EBIT,
 	Q6AFE_LPASS_CLK_ID_TER_MI2S_EBIT,
+	Q6AFE_LPASS_CLK_ID_QUAD_MI2S_EBIT,//Austin+++
 };
 
 static struct mi2s_conf mi2s_intf_conf[MI2S_MAX];
@@ -469,21 +474,21 @@ static struct dev_config aux_pcm_tx_cfg[] = {
 
 /* Default configuration of MI2S channels */
 static struct dev_config mi2s_rx_cfg[] = {
-	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
+	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S24_LE, 2}, /* Austin+++ */
 	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
 	[QUIN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
-	[SEN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 2},
+	[SEN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S24_LE, 2}, /* ASUS_BSP Paul +++ */
 };
 
 static struct dev_config mi2s_tx_cfg[] = {
 	[PRIM_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[SEC_MI2S]  = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
 	[TERT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
-	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+	[QUAT_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1}, /* Austin +++ */
 	[QUIN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
-	[SEN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S16_LE, 1},
+	[SEN_MI2S] = {SAMPLING_RATE_48KHZ, SNDRV_PCM_FORMAT_S24_LE, 2}, /* ASUS_BSP Paul +++ */
 };
 
 static struct tdm_dev_config pri_tdm_dev_config[MAX_PATH][TDM_PORT_MAX] = {
@@ -5608,6 +5613,47 @@ static const struct snd_soc_dapm_widget msm_int_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("Digital Mic7", NULL),
 };
 
+#ifdef ASUS_ZS673KS_PROJECT
+// Austin +++
+extern void es928x_jdet_jack_det(struct snd_soc_component *component, struct snd_soc_jack *jack);
+
+static int msm_audrx_ess_init(struct snd_soc_pcm_runtime *rtd)
+{
+       int ret = 0;
+       struct snd_soc_dapm_context *dapm;
+       struct snd_soc_component *component = snd_soc_rtdcom_lookup(rtd, "es928x_codec");
+
+		if (!component) {
+			pr_err("%s: component is NULL\n", __func__);
+			return -EINVAL;
+		}
+		dapm = snd_soc_component_get_dapm(component);
+		
+       ret = snd_soc_card_jack_new(rtd->card, "ess Headset Jack",
+                                       SND_JACK_HEADSET | SND_JACK_LINEOUT |
+                                   SND_JACK_BTN_0 | SND_JACK_BTN_1 |
+                                   SND_JACK_BTN_2 | SND_JACK_BTN_3,
+                                       &sdm845_sound_jack, NULL, 0);
+
+       if (ret)
+       {
+               dev_err(rtd->card->dev, "New Headset Jack failed! (%d)\n", ret);
+               return ret;
+       }
+
+       snd_jack_set_key(sdm845_sound_jack.jack, SND_JACK_BTN_0, KEY_MEDIA);
+       snd_jack_set_key(sdm845_sound_jack.jack, SND_JACK_BTN_1, KEY_VOLUMEUP);
+       snd_jack_set_key(sdm845_sound_jack.jack, SND_JACK_BTN_2, KEY_VOLUMEDOWN);
+       snd_jack_set_key(sdm845_sound_jack.jack, SND_JACK_BTN_3, KEY_VOICECOMMAND);
+
+	es928x_jdet_jack_det(component, &sdm845_sound_jack);
+	pr_err("%s: end \n", __func__);
+	return 0;
+
+}
+//Austin --- 
+#endif
+
 static int msm_wcn_init(struct snd_soc_pcm_runtime *rtd)
 {
 	unsigned int rx_ch[WCN_CDC_SLIM_RX_CH_MAX] = {157, 158};
@@ -6629,6 +6675,9 @@ static struct snd_soc_dai_link msm_mi2s_be_dai_links[] = {
 	{
 		.name = LPASS_BE_PRI_MI2S_RX,
 		.stream_name = "Primary MI2S Playback",
+#ifdef ASUS_ZS673KS_PROJECT
+		.init = &msm_audrx_ess_init, //Austin+++
+#endif
 		.no_pcm = 1,
 		.dpcm_playback = 1,
 		.id = MSM_BACKEND_DAI_PRI_MI2S_RX,

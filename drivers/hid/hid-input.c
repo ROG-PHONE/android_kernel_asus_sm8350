@@ -35,7 +35,7 @@ static const unsigned char hid_keyboard[256] = {
 	191,192,193,194,134,138,130,132,128,129,131,137,133,135,136,113,
 	115,114,unk,unk,unk,121,unk, 89, 93,124, 92, 94, 95,unk,unk,unk,
 	122,123, 90, 91, 85,unk,unk,unk,unk,unk,unk,unk,111,unk,unk,unk,
-	unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,
+	unk,unk,unk,unk,unk,251,252,unk,unk,unk,unk,unk,unk,unk,unk,unk,
 	unk,unk,unk,unk,unk,unk,179,180,unk,unk,unk,unk,unk,unk,unk,unk,
 	unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,unk,
 	unk,unk,unk,unk,unk,unk,unk,unk,111,unk,unk,unk,unk,unk,unk,unk,
@@ -702,7 +702,17 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		}
 
 		switch (usage->hid) {
+#if defined ASUS_ZS673KS_PROJECT || defined ASUS_PICASSO_PROJECT		
 		/* These usage IDs map directly to the usage codes. */
+		case HID_BTN_5:map_key_clear(BTN_5);break;
+        case HID_BTN_6:map_key_clear(BTN_6);break;
+        case HID_BTN_7:map_key_clear(BTN_7);break;
+
+        case HID_BTN_9:map_key_clear(GPBTN_M1);break;
+        case HID_BTN_10:map_key_clear(GPBTN_M2);break;
+        case HID_BTN_11:map_key_clear(GPBTN_M3);break;
+        case HID_BTN_12:map_key_clear(GPBTN_M4);break;
+#endif        
 		case HID_GD_X: case HID_GD_Y: case HID_GD_Z:
 		case HID_GD_RX: case HID_GD_RY: case HID_GD_RZ:
 			if (field->flags & HID_MAIN_ITEM_RELATIVE)
@@ -957,6 +967,10 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 		case 0x0e5: map_key_clear(KEY_BASSBOOST);	break;
 		case 0x0e9: map_key_clear(KEY_VOLUMEUP);	break;
 		case 0x0ea: map_key_clear(KEY_VOLUMEDOWN);	break;
+#if defined ASUS_ZS673KS_PROJECT || defined ASUS_PICASSO_PROJECT	
+		case 0x0eb: map_key_clear(ASUS_STATION_L1);		break;
+		case 0x0ec: map_key_clear(ASUS_STATION_R1);		break;
+#endif		
 		case 0x0f5: map_key_clear(KEY_SLOW);		break;
 
 		case 0x181: map_key_clear(KEY_BUTTONCONFIG);	break;
@@ -1132,6 +1146,10 @@ static void hidinput_configure_usage(struct hid_input *hidinput, struct hid_fiel
 	}
 
 mapped:
+	/* Mapping failed, bail out */
+	if (!bit)
+		return;
+
 	if (device->driver->input_mapped &&
 	    device->driver->input_mapped(device, hidinput, field, usage,
 					 &bit, &max) < 0) {

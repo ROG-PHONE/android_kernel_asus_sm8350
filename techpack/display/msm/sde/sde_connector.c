@@ -19,6 +19,8 @@
 #include "sde_rm.h"
 #include "sde_vm.h"
 #include <drm/drm_probe_helper.h>
+//ASUS BSP Display +++
+#include "../dsi/dsi_anakin.h"
 
 #define BL_NODE_NAME_SIZE 32
 #define HDR10_PLUS_VSIF_TYPE_CODE      0x81
@@ -2475,6 +2477,14 @@ static void sde_connector_check_status_work(struct work_struct *work)
 
 	rc = conn->ops.check_status(&conn->base, conn->display, false);
 	mutex_unlock(&conn->lock);
+
+#if defined ASUS_ZS673KS_PROJECT || defined ASUS_PICASSO_PROJECT
+	// ASUS BSP Display  ERR FG
+	if(anakin_get_err_fg_irq_state()){
+		DSI_LOG("err fg irq state is on // call panel dead");
+		_sde_connector_report_panel_dead(conn, false);
+	}
+#endif
 
 	if (rc > 0) {
 		u32 interval;
