@@ -1536,7 +1536,7 @@ static void hdd_send_association_event(struct net_device *dev,
 
 		ucfg_p2p_status_connect(adapter->vdev);
 
-		hdd_nofl_info("%s(vdevid-%d): " QDF_MAC_ADDR_FMT
+		hdd_nofl_info("[%s](vdevid-%d): " QDF_MAC_ADDR_FMT
 			      " connected to "
 			      QDF_MAC_ADDR_FMT, dev->name, adapter->vdev_id,
 			      QDF_MAC_ADDR_REF(adapter->mac_addr.bytes),
@@ -1612,7 +1612,7 @@ static void hdd_send_association_event(struct net_device *dev,
 		if (ucfg_pkt_capture_get_pktcap_mode(hdd_ctx->psoc))
 			ucfg_pkt_capture_record_channel(adapter->vdev);
 	} else {                /* Not Associated */
-		hdd_nofl_info("%s(vdevid-%d): disconnected", dev->name,
+		hdd_nofl_info("[%s](vdevid-%d): disconnected", dev->name,
 			      adapter->vdev_id);
 		memset(wrqu.ap_addr.sa_data, '\0', ETH_ALEN);
 		policy_mgr_decr_session_set_pcl(hdd_ctx->psoc,
@@ -3381,6 +3381,7 @@ hdd_association_completion_handler(struct hdd_adapter *adapter,
 					      eCSR_BSS_TYPE_INFRASTRUCTURE);
 			}
 
+			hdd_nud_indicate_roam(adapter);
 			/* Start the tx queues */
 			hdd_debug("Enabling queues");
 			hdd_netif_queue_enable(adapter);
